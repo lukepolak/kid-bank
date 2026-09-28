@@ -8,7 +8,12 @@ export function App() {
     api.ping
       .$get()
       .then((res) => res.json())
-      .then((ping) => setStatus(`${ping.status} · baza: ${ping.database}`))
+      .then(
+        (ping) =>
+          setStatus(
+            `${ping.status} · baza: ${ping.database} · ${ping.parent}`,
+          ),
+      )
       .catch(() => setStatus("Brak połączenia"));
   }, []);
 

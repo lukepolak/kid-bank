@@ -13,6 +13,12 @@
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*"]
   },
+  // Filled in by the Zero Trust dashboard step (issue 02). Until then these
+  // are empty and every API request is rejected — fail closed.
+  "vars": {
+    "ACCESS_TEAM_DOMAIN": "",
+    "ACCESS_AUD": ""
+  },
   "d1_databases": [
     {
       "binding": "DB",

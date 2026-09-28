@@ -20,13 +20,19 @@ step).
 
 ## Acceptance criteria
 
-- [ ] `wrangler deploy` ships one Worker: static assets (the SPA) + Hono API, via the Cloudflare Vite plugin
-- [ ] Visiting the deployed URL renders the React app
-- [ ] An `/api` route returns JSON; the SPA displays its value through the typed RPC client (no hand-written types)
-- [ ] Drizzle is wired to the bound D1 database; an empty migration applies both locally and remotely
-- [ ] Vitest + `@cloudflare/vitest-pool-workers` runs a test that calls the real Worker entry against real local D1 — the primary seam from the SPEC works
-- [ ] No Cloudflare Pages anywhere (ADR 0002)
+- [x] `wrangler deploy` ships one Worker: static assets (the SPA) + Hono API, via the Cloudflare Vite plugin
+- [x] Visiting the deployed URL renders the React app
+- [x] An `/api` route returns JSON; the SPA displays its value through the typed RPC client (no hand-written types)
+- [x] Drizzle is wired to the bound D1 database; an empty migration applies both locally and remotely
+- [x] Vitest + the Cloudflare Vitest plugin runs a test that calls the real Worker entry against real local D1 — the primary seam from the SPEC works
+- [x] No Cloudflare Pages anywhere (ADR 0002)
 
 ## Blocked by
 
 None - can start immediately.
+
+## Comments
+
+- Deployed to https://skarbonka.sdfg.pl (custom domain; workers.dev disabled — one entrance). Verified live: `/` serves the SPA, `/api/ping` answers with a connected remote D1. Empty migration applied remotely.
+- Implementation notes for later slices: the testing stack is `@cloudflare/vitest-plugin` (Vite plugin), not the legacy `vitest-pool-workers` config; seam tests type the Worker's `exports` via `Cloudflare.GlobalProps.mainModule`; D1 blocks `sqlite_version()`. Remember to `pnpm build` before `pnpm run deploy` (the plugin snapshots the config into dist).
+- Status: done.
