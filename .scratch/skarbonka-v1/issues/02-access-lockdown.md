@@ -20,13 +20,13 @@ it).
 
 ## Acceptance criteria
 
-- [ ] Visiting the subdomain unauthenticated shows the Cloudflare Access login page
-- [ ] Signing in with Google works for exactly the two allowed emails; anyone else is denied
-- [ ] API requests without Access identity get 401; authenticated requests expose the parent's email to the API layer
-- [ ] Session duration is 1 month (re-login roughly monthly)
-- [ ] Local development simulates a parent identity via Wrangler config — no real Access login needed while coding
-- [ ] Integration test at the primary seam: request without identity → 401; with simulated identity → 200 and the email is visible to the route
-- [ ] The workers.dev URL from issue 01 is disabled or likewise protected, so the app has exactly one entrance
+- [x] Visiting the subdomain unauthenticated shows the Cloudflare Access login page
+- [x] Signing in with OTP works for exactly the two allowed emails (per the policy); anyone else is denied. Login method is One-time PIN, not Google — see Comments.
+- [x] API requests without Access identity get 401; authenticated requests expose the parent's email to the API layer
+- [x] Session duration is 1 month (re-login roughly monthly)
+- [x] Local development simulates a parent identity via Wrangler config — no real Access login needed while coding
+- [x] Integration test at the primary seam: request without identity → 401; with simulated identity → 200 and the email is visible to the route
+- [x] The workers.dev URL from issue 01 is disabled — the app has exactly one entrance
 
 ## Blocked by
 
@@ -44,3 +44,9 @@ it).
 - Code side done: identity module (claims validation, fail-closed on unconfigured Access
   anchors, local-dev bypass), 401 middleware, 6/6 seam tests green. Production 401s everything
   until ACCESS_TEAM_DOMAIN/ACCESS_AUD are filled and deployed — fail closed by design.
+- Production bug found during verification and fixed: real Access tokens carry `aud` as an
+  **array** (`"aud": ["<AUD>"]`), while the middleware and synthetic test tokens assumed a
+  string — every legitimate login was rejected 401. Lesson recorded: for third-party token
+  shapes, encode the *documented* shape (application-token docs) in tests, not an invented one.
+- Status: done. Verified live by the maintainer (email shown in-app). Wife's login shares the
+  same allow policy but wasn't separately exercised yet.

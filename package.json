@@ -14,10 +14,12 @@
     "db:apply:remote": "wrangler d1 migrations apply skarbonka --remote"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.104.0",
     "drizzle-orm": "^0.45.3",
     "hono": "^4.13.9",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.60.2",

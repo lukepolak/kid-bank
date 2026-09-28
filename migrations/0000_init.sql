@@ -1,1 +1,2 @@
--- Custom SQL migration file, put your code below! --
+-- Skarbonka initial migration: declare foreign key enforcement.
+PRAGMA foreign_keys = ON;
