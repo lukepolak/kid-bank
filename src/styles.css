@@ -1,0 +1,107 @@
+:root {
+  color-scheme: light dark;
+}
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  margin: 0;
+  background: #f7f7f8;
+  color: #1c1c1e;
+}
+
+main {
+  max-width: 30rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 4rem;
+}
+
+h1 {
+  font-size: 1.6rem;
+}
+
+button {
+  font: inherit;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid #d1d1d6;
+  background: #fff;
+  cursor: pointer;
+}
+
+button:hover:enabled {
+  background: #f0f0f2;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+}
+
+li {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #e5e5ea;
+}
+
+form {
+  display: grid;
+  gap: 0.25rem;
+  margin: 1.5rem 0;
+}
+
+input {
+  font: inherit;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid #d1d1d6;
+}
+
+/* Overdraft — a soft warning (CONTEXT.md: allowed by design, warned softly). */
+.warning {
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+  color: #9a3412;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+}
+
+.overdraft {
+  color: #b45309;
+  font-weight: 600;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #161618;
+    color: #f2f2f4;
+  }
+
+  button,
+  input {
+    background: #232326;
+    border-color: #3a3a3e;
+    color: inherit;
+  }
+
+  button:hover:enabled {
+    background: #2c2c30;
+  }
+
+  li {
+    border-color: #2c2c30;
+  }
+
+  .warning {
+    background: #3a250c;
+    border-color: #7c4a12;
+    color: #fbd38d;
+  }
+
+  .overdraft {
+    color: #f6ad55;
+  }
+}

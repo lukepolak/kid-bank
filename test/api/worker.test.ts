@@ -211,6 +211,37 @@ describe("Access identity at the API seam", () => {
     expect(res.status).toBe(404);
   });
 
+  it("allows spending past zero: balance goes negative, overdraft flag flips, entry accepted", async () => {
+    const jwt = makeAccessJwt({ email: PARENT_EMAIL });
+    const kid = await createKid(jwt, "Minus");
+
+    const first = await exports.default.fetch(
+      authedJsonRequest("POST", `/api/accounts/${kid.id}/entries`, jwt, {
+        amountGrosze: 1000,
+      }),
+    );
+    expect(first.status).toBe(201);
+
+    const second = await exports.default.fetch(
+      authedJsonRequest("POST", `/api/accounts/${kid.id}/entries`, jwt, {
+        amountGrosze: -3000,
+        description: "LEGO za dużo",
+      }),
+    );
+    expect(second.status).toBe(201); // reality has overdrafts; never block
+    const body = (await second.json()) as {
+      balanceGrosze: number;
+      overdraft: boolean;
+    };
+    expect(body.balanceGrosze).toBe(-2000);
+    expect(body.overdraft).toBe(true);
+
+    const accounts = (await (
+      await exports.default.fetch(authedRequest("/api/accounts", jwt))
+    ).json()) as Account[];
+    expect(accounts.find((a) => a.id === kid.id)?.overdraft).toBe(true);
+  });
+
   it("rejects a kid with an empty name with 400", async () => {
     const res = await exports.default.fetch(
       authedJsonRequest("POST", "/api/kids", makeAccessJwt({ email: PARENT_EMAIL }), {

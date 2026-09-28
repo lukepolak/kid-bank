@@ -20,8 +20,16 @@ export function KidDetail({
 
       <h1>{account.name}</h1>
       <p>
-        <strong>{formatGrosze(account.balanceGrosze)}</strong>
+        <strong className={account.overdraft ? "overdraft" : undefined}>
+          {formatGrosze(account.balanceGrosze)}
+        </strong>
       </p>
+
+      {account.overdraft && (
+        <p role="status" className="warning">
+          Konto na minusie — dołóż {formatGrosze(-account.balanceGrosze)}
+        </p>
+      )}
 
       <EntryForm
         onSubmit={async (amountGrosze, description) => {

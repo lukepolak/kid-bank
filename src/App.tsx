@@ -25,7 +25,11 @@ export function App() {
         {(accounts ?? []).map((account) => (
           <li key={account.id}>
             <button type="button" onClick={() => setSelectedKidId(account.id)}>
-              {account.name} — {formatGrosze(account.balanceGrosze)}
+              {account.name} —{" "}
+              <span className={account.overdraft ? "overdraft" : undefined}>
+                {formatGrosze(account.balanceGrosze)}
+              </span>
+              {account.overdraft && " ⚠"}
             </button>
           </li>
         ))}
