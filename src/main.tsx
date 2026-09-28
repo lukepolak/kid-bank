@@ -12,7 +12,15 @@ if ("serviceWorker" in navigator) {
   });
 }
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    // Run queries/mutations even when the browser reports offline, and fail
+    // fast: offline data operations must land in the visible "Brak połączenia"
+    // error state (SPEC issue 08), not hang pending in TanStack's paused queue.
+    queries: { retry: false, networkMode: "always" },
+    mutations: { networkMode: "always" },
+  },
+});
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
