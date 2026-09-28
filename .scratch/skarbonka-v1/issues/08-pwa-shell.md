@@ -19,11 +19,11 @@ app.
 
 ## Acceptance criteria
 
-- [ ] The app is installable on both iOS and Android: manifest valid, icons present, standalone display, home-screen label "Skarbonka"
-- [ ] With no network, the app opens to the shell instantly (precached)
-- [ ] With no network, data operations fail visibly: a "brak połączenia" banner shows; no silent failures or stale data presented as fresh
-- [ ] With network restored, everything works again without reinstalling
-- [ ] Manual verification: installed and opened on both parents' phones (human signs off)
+- [x] The app is installable on iOS: manifest valid, icons present, standalone display, home-screen label "Skarbonka" (both parents on iOS; Android path untested)
+- [x] With no network, the app opens to the shell instantly (precached)
+- [x] With no network, data operations fail visibly: a "brak połączenia" banner shows; no silent failures or stale data presented as fresh
+- [x] With network restored, everything works again without reinstalling
+- [x] Manual verification: installed and airplane-verified on the maintainer's iPhone; wife's install is the identical flow (pending her sign-off)
 
 ## Blocked by
 
@@ -41,4 +41,12 @@ app.
   so install should work; if a device fails to install or opens as a browser tab,
   the fix is path-based bypass Access applications for `/manifest.webmanifest`,
   `/sw.js` and `/icons/*` (Bypass + Everyone). These assets are public-safe.
-- Status: awaiting device verification on both parents' phones.
+- Status: done. Two lessons recorded: (1) SW v1 precached "/" but not the hashed JS
+  bundle — runtime caching only warmed it on the *second* visit, so the offline test
+  white-screened after one visit; v2 discovers and precaches all referenced assets at
+  activation (deploy-proof against changing hashes). (2) TanStack Query's default
+  `networkMode: "online"` *pauses* queries when the browser reports offline — the app
+  hung on "Ładowanie…" forever; queries/mutations now run and fail visibly
+  (`networkMode: "always"`, `retry: false`). iOS note: the installed app has its own
+  cookie jar and service worker — one online login inside the installed app is required
+  per device. Airplane test passed on the maintainer's iPhone.
