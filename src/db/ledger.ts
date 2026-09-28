@@ -108,30 +108,66 @@ export function createLedger(d1: D1Database) {
         updatedAt: now,
       });
 
-      const [{ balanceGrosze }] = await db
-        .select({
-          balanceGrosze: sql<number>`coalesce(sum(${entries.amountGrosze}), 0)`,
-        })
-        .from(entries)
-        .where(eq(entries.kidId, kidId));
-
-      const entry = await db
-        .select()
-        .from(entries)
-        .where(eq(entries.id, id))
-        .get();
-
-      return {
-        entry: serializeEntry(entry!),
-        balanceGrosze,
-        overdraft: balanceGrosze < 0,
-      };
+      const created = await this.getEntry(id);
+      return { entry: created!, ...(await this.balanceOf(kidId)) };
     },
 
     /**
      * An account's history: non-deleted entries, newest first (SPEC).
      * Returns null for an unknown kid (route maps that to 404).
      */
+    /**
+     * Remove a mistake from history and balance (ADR 0001): soft-delete only —
+     * the row is never physically removed, deleted_at records the event.
+     * Returns the account state, or null for unknown/already-deleted entries.
+     */
+    async deleteEntry(
+      id: string,
+    ): Promise<{ balanceGrosze: number; overdraft: boolean } | null> {
+      const existing = await db
+        .select()
+        .from(entries)
+        .where(and(eq(entries.id, id), isNull(entries.deletedAt)))
+        .get();
+      if (!existing) return null;
+
+      await db
+        .update(entries)
+        .set({ deletedAt: new Date() })
+        .where(eq(entries.id, id));
+
+      return this.balanceOf(existing.kidId);
+    },
+
+    /**
+     * Fix a mistake (ADR 0001): amount and description change, created_at is
+     * preserved, updated_at records the change, balance follows. Returns
+     * null for unknown or already-deleted entries (route maps to 404).
+     */
+    async editEntry(
+      id: string,
+      input: EntryInput,
+    ): Promise<{ entry: EntryRecord; balanceGrosze: number; overdraft: boolean } | null> {
+      const existing = await db
+        .select()
+        .from(entries)
+        .where(and(eq(entries.id, id), isNull(entries.deletedAt)))
+        .get();
+      if (!existing) return null;
+
+      await db
+        .update(entries)
+        .set({
+          amountGrosze: input.amountGrosze,
+          description: input.description ?? null,
+          updatedAt: new Date(),
+        })
+        .where(eq(entries.id, id));
+
+      const entry = await this.getEntry(id);
+      return { entry: entry!, ...await this.balanceOf(existing.kidId) };
+    },
+
     async listEntries(kidId: string): Promise<EntryRecord[] | null> {
       const kid = await db
         .select({ id: kids.id })
@@ -147,6 +183,29 @@ export function createLedger(d1: D1Database) {
         .orderBy(desc(entries.createdAt), sql`rowid desc`);
 
       return rows.map(serializeEntry);
+    },
+
+    async getEntry(id: string): Promise<EntryRecord | null> {
+      const row = await db
+        .select()
+        .from(entries)
+        .where(eq(entries.id, id))
+        .get();
+      return row ? serializeEntry(row) : null;
+    },
+
+    /** The account state: derived balance + overdraft flag (never stored). */
+    async balanceOf(
+      kidId: string,
+    ): Promise<{ balanceGrosze: number; overdraft: boolean }> {
+      const [{ balanceGrosze }] = await db
+        .select({
+          balanceGrosze: sql<number>`coalesce(sum(${entries.amountGrosze}), 0)`,
+        })
+        .from(entries)
+        .where(and(eq(entries.kidId, kidId), isNull(entries.deletedAt)));
+
+      return { balanceGrosze, overdraft: balanceGrosze < 0 };
     },
   };
 }

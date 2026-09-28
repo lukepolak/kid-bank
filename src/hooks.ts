@@ -58,6 +58,48 @@ export function useEntries(kidId: string) {
   });
 }
 
+export function useEditEntry(kidId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: {
+      id: string;
+      amountGrosze: number;
+      description?: string;
+    }) => {
+      const res = await api.entries[":id"].$patch({
+        param: { id: input.id },
+        json: { amountGrosze: input.amountGrosze, description: input.description },
+      });
+      if (!res.ok) throw new Error("Nie udało się zapisać wpisu");
+      return (await res.json()) as {
+        entry: Entry;
+        balanceGrosze: number;
+        overdraft: boolean;
+      };
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      void queryClient.invalidateQueries({ queryKey: ["entries", kidId] });
+    },
+  });
+}
+
+export function useDeleteEntry(kidId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await api.entries[":id"].$delete({ param: { id } });
+      if (!res.ok) throw new Error("Nie udało się usunąć wpisu");
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      void queryClient.invalidateQueries({ queryKey: ["entries", kidId] });
+    },
+  });
+}
+
 export function useAddEntry(kidId: string) {
   const queryClient = useQueryClient();
 

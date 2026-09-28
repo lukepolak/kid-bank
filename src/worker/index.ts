@@ -71,6 +71,26 @@ const api = new Hono<AppEnv>()
       return c.json(result, 201);
     },
   )
+  .delete("/entries/:id", async (c) => {
+    const ledger = createLedger(c.env.DB);
+    const result = await ledger.deleteEntry(c.req.param("id"));
+    if (!result) return c.json({ error: "Nie ma takiego wpisu" }, 404);
+    return c.body(null, 204);
+  })
+  .patch(
+    "/entries/:id",
+    zValidator("json", EntryInput, (result, c) => {
+      if (!result.success) {
+        return c.json({ error: "Nieprawidłowa kwota lub opis" }, 400);
+      }
+    }),
+    async (c) => {
+      const ledger = createLedger(c.env.DB);
+      const result = await ledger.editEntry(c.req.param("id"), c.req.valid("json"));
+      if (!result) return c.json({ error: "Nie ma takiego wpisu" }, 404);
+      return c.json(result);
+    },
+  )
   .get("/accounts/:kidId/entries", async (c) => {
     const ledger = createLedger(c.env.DB);
     const history = await ledger.listEntries(c.req.param("kidId"));

@@ -60,6 +60,22 @@ async function createKid(jwt: string, name: string): Promise<{ id: string }> {
   return (await res.json()) as { id: string };
 }
 
+async function addEntry(
+  jwt: string,
+  kidId: string,
+  input: { amountGrosze: number; description?: string },
+): Promise<{ entry: Entry; balanceGrosze: number; overdraft: boolean }> {
+  const res = await exports.default.fetch(
+    authedJsonRequest("POST", `/api/accounts/${kidId}/entries`, jwt, input),
+  );
+  expect(res.status).toBe(201);
+  return (await res.json()) as {
+    entry: Entry;
+    balanceGrosze: number;
+    overdraft: boolean;
+  };
+}
+
 describe("Access identity at the API seam", () => {
   it("rejects requests without Access identity with 401", async () => {
     const res = await exports.default.fetch(
@@ -240,6 +256,96 @@ describe("Access identity at the API seam", () => {
       await exports.default.fetch(authedRequest("/api/accounts", jwt))
     ).json()) as Account[];
     expect(accounts.find((a) => a.id === kid.id)?.overdraft).toBe(true);
+  });
+
+  it("edits an entry: amount and description change, balance follows, created_at preserved", async () => {
+    const jwt = makeAccessJwt({ email: PARENT_EMAIL });
+    const kid = await createKid(jwt, "Edycja");
+    const created = await addEntry(jwt, kid.id, {
+      amountGrosze: 10000,
+      description: "Kieszonkowe",
+    });
+
+    const res = await exports.default.fetch(
+      authedJsonRequest("PATCH", `/api/entries/${created.entry.id}`, jwt, {
+        amountGrosze: 1000,
+        description: "Kieszonkowe (mniej)",
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      entry: Entry;
+      balanceGrosze: number;
+      overdraft: boolean;
+    };
+    expect(body.entry.amountGrosze).toBe(1000);
+    expect(body.entry.description).toBe("Kieszonkowe (mniej)");
+    // ADR 0001: the entry keeps its original creation timestamp.
+    expect(body.entry.createdAt).toBe(created.entry.createdAt);
+    expect(body.balanceGrosze).toBe(1000);
+
+    const accounts = (await (
+      await exports.default.fetch(authedRequest("/api/accounts", jwt))
+    ).json()) as Account[];
+    expect(accounts.find((a) => a.id === kid.id)?.balanceGrosze).toBe(1000);
+  });
+
+  it("soft-deletes an entry: gone from history and balance, but the row survives (ADR 0001)", async () => {
+    const jwt = makeAccessJwt({ email: PARENT_EMAIL });
+    const kid = await createKid(jwt, "Usuwanko");
+    const { entry } = await addEntry(jwt, kid.id, { amountGrosze: 10000 });
+
+    const res = await exports.default.fetch(
+      authedJsonRequest("DELETE", `/api/entries/${entry.id}`, jwt),
+    );
+    expect(res.status).toBe(204);
+
+    // Gone from the account's history…
+    const history = (await (
+      await exports.default.fetch(
+        authedRequest(`/api/accounts/${kid.id}/entries`, jwt),
+      )
+    ).json()) as Entry[];
+    expect(history).toHaveLength(0);
+
+    // …and from the balance.
+    const accounts = (await (
+      await exports.default.fetch(authedRequest("/api/accounts", jwt))
+    ).json()) as Account[];
+    expect(accounts.find((a) => a.id === kid.id)?.balanceGrosze).toBe(0);
+
+    // No HTTP endpoint exposes deleted entries (by design), so this one
+    // assertion goes around the seam — deliberately — to pin ADR 0001's
+    // invariant that soft-deleted rows are never physically removed.
+    const { env } = await import("cloudflare:workers");
+    const row = await env.DB.prepare(
+      "SELECT deleted_at FROM entries WHERE id = ?",
+    )
+      .bind(entry.id)
+      .first<{ deleted_at: number }>();
+    expect(row).not.toBeNull();
+    expect(row?.deleted_at).not.toBeNull();
+  });
+
+  it("returns 404 when deleting an unknown or already-deleted entry", async () => {
+    const jwt = makeAccessJwt({ email: PARENT_EMAIL });
+    const kid = await createKid(jwt, "Usuwanko2");
+    const { entry } = await addEntry(jwt, kid.id, { amountGrosze: 100 });
+
+    await exports.default.fetch(
+      authedJsonRequest("DELETE", `/api/entries/${entry.id}`, jwt),
+    );
+
+    const res = await exports.default.fetch(
+      authedJsonRequest("DELETE", `/api/entries/${entry.id}`, jwt),
+    );
+    expect(res.status).toBe(404);
+
+    const unknown = await exports.default.fetch(
+      authedJsonRequest("DELETE", "/api/entries/nie-ma-takiego", jwt),
+    );
+    expect(unknown.status).toBe(404);
   });
 
   it("rejects a kid with an empty name with 400", async () => {
