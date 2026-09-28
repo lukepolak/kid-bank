@@ -19,7 +19,7 @@ export function KidDetail({
   account: Account;
   onBack: () => void;
 }) {
-  const { data: entries, isPending } = useEntries(account.id);
+  const { data: entries, isPending, error } = useEntries(account.id);
   const addEntry = useAddEntry(account.id);
   const editEntry = useEditEntry(account.id);
   const deleteEntry = useDeleteEntry(account.id);
@@ -104,6 +104,7 @@ export function KidDetail({
 
       <h2>Historia</h2>
       {isPending && <p>Ładowanie…</p>}
+      {error && <p role="alert">Brak połączenia</p>}
       <ul>
         {(entries ?? []).map((entry) =>
           editingId === entry.id ? (
