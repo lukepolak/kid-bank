@@ -80,8 +80,8 @@ overdraft detection. Nothing else in the codebase writes SQL.
 
 A pure function converting Polish-formatted input to grosze: "149,50" → 14950, "149" →
 14900, "149,5" → 14950. Rejects garbage (letters, double separators, negative input — sign
-comes only from the add/remove action). Shared by the entry form and server-side
-validation.
+comes only from the add/remove action). Shared by the entry and edit forms; its rules
+mirror the API's integer-grosze validation (the API receives grosze, not strings).
 
 ### Schema
 
@@ -112,7 +112,8 @@ Cloudflare Access sits in front of the whole app on a subdomain of the family's 
 zone. Google OAuth, 1-month sessions, two allowed emails. The API reads the parent's email
 from the Access JWT in request headers; requests without valid Access identity get 401.
 (The `ctx.access` API is unavailable for Workers with static assets.) Local development
-simulates Access identity via the Wrangler dev configuration. Every entry is stamped with
+simulates the signed-in parent via a `.dev.vars` bypass email read by the identity
+module (wrangler's own `access.dev` simulation is likewise unavailable). Every entry is stamped with
 the acting parent's email from day one — backfill is impossible.
 
 ### Frontend
@@ -176,4 +177,4 @@ No E2E in v1.
 - The domain glossary lives in CONTEXT.md; use its terms (Account, Entry, Balance,
   Overdraft) in code and UI consistently.
 - Deployment target is a subdomain of the family's existing Cloudflare zone; Access
-  application configuration is part of setup (Google IdP, 1-month session duration).
+  application configuration is part of setup (One-time PIN login method, 1-month session duration).

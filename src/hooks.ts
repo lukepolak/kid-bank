@@ -5,21 +5,8 @@ import {
 } from "@tanstack/react-query";
 import { api } from "./api-client";
 
-export interface Account {
-  id: string;
-  name: string;
-  archived: boolean;
-  balanceGrosze: number;
-  overdraft: boolean;
-}
-
-export interface Entry {
-  id: string;
-  amountGrosze: number;
-  description: string | null;
-  createdBy: string;
-  createdAt: string;
-}
+// Re-exported for the components that consume the API-derived shapes.
+export type { Account, Entry } from "./api-client";
 
 export function useAccounts() {
   return useQuery({
@@ -27,7 +14,7 @@ export function useAccounts() {
     queryFn: async () => {
       const res = await api.accounts.$get();
       if (!res.ok) throw new Error("Nie udało się pobrać kont");
-      return (await res.json()) as Account[];
+      return res.json();
     },
   });
 }
@@ -39,7 +26,7 @@ export function useAddKid() {
     mutationFn: async (name: string) => {
       const res = await api.kids.$post({ json: { name } });
       if (!res.ok) throw new Error("Nie udało się dodać dziecka");
-      return (await res.json()) as Account;
+      return res.json();
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["accounts"] }),
   });
@@ -59,7 +46,7 @@ export function useUpdateKid() {
         json: { name: input.name, archived: input.archived },
       });
       if (!res.ok) throw new Error("Nie udało się zapisać dziecka");
-      return (await res.json()) as Account;
+      return res.json();
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["accounts"] }),
   });
@@ -73,7 +60,29 @@ export function useEntries(kidId: string) {
         param: { kidId },
       });
       if (!res.ok) throw new Error("Nie udało się pobrać historii");
-      return (await res.json()) as Entry[];
+      return res.json();
+    },
+  });
+}
+
+export function useAddEntry(kidId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: {
+      amountGrosze: number;
+      description?: string;
+    }) => {
+      const res = await api.accounts[":kidId"].entries.$post({
+        param: { kidId },
+        json: input,
+      });
+      if (!res.ok) throw new Error("Nie udało się dodać wpisu");
+      return res.json();
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      void queryClient.invalidateQueries({ queryKey: ["entries", kidId] });
     },
   });
 }
@@ -92,11 +101,7 @@ export function useEditEntry(kidId: string) {
         json: { amountGrosze: input.amountGrosze, description: input.description },
       });
       if (!res.ok) throw new Error("Nie udało się zapisać wpisu");
-      return (await res.json()) as {
-        entry: Entry;
-        balanceGrosze: number;
-        overdraft: boolean;
-      };
+      return res.json();
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["accounts"] });
@@ -112,32 +117,6 @@ export function useDeleteEntry(kidId: string) {
     mutationFn: async (id: string) => {
       const res = await api.entries[":id"].$delete({ param: { id } });
       if (!res.ok) throw new Error("Nie udało się usunąć wpisu");
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["accounts"] });
-      void queryClient.invalidateQueries({ queryKey: ["entries", kidId] });
-    },
-  });
-}
-
-export function useAddEntry(kidId: string) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (input: {
-      amountGrosze: number;
-      description?: string;
-    }) => {
-      const res = await api.accounts[":kidId"].entries.$post({
-        param: { kidId },
-        json: input,
-      });
-      if (!res.ok) throw new Error("Nie udało się dodać wpisu");
-      return (await res.json()) as {
-        entry: Entry;
-        balanceGrosze: number;
-        overdraft: boolean;
-      };
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["accounts"] });

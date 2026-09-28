@@ -155,10 +155,6 @@ export function createLedger(d1: D1Database) {
     },
 
     /**
-     * An account's history: non-deleted entries, newest first (SPEC).
-     * Returns null for an unknown kid (route maps that to 404).
-     */
-    /**
      * Remove a mistake from history and balance (ADR 0001): soft-delete only —
      * the row is never physically removed, deleted_at records the event.
      * Returns the account state, or null for unknown/already-deleted entries.
@@ -210,6 +206,10 @@ export function createLedger(d1: D1Database) {
       return { entry: entry!, ...await this.balanceOf(existing.kidId) };
     },
 
+    /**
+     * An account's history: non-deleted entries, newest first (SPEC).
+     * Returns null for an unknown kid (route maps that to 404).
+     */
     async listEntries(kidId: string): Promise<EntryRecord[] | null> {
       const kid = await db
         .select({ id: kids.id })
