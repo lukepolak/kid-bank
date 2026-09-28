@@ -1,11 +1,18 @@
 import { useState } from "react";
 import { formatGrosze } from "./format";
+import { KidDetail } from "./KidDetail";
 import { useAccounts, useAddKid } from "./hooks";
 
 export function App() {
   const { data: accounts, isPending, error } = useAccounts();
   const addKid = useAddKid();
   const [name, setName] = useState("");
+  const [selectedKidId, setSelectedKidId] = useState<string | null>(null);
+
+  const selected = accounts?.find((account) => account.id === selectedKidId);
+  if (selected) {
+    return <KidDetail account={selected} onBack={() => setSelectedKidId(null)} />;
+  }
 
   return (
     <main>
@@ -17,7 +24,9 @@ export function App() {
       <ul>
         {(accounts ?? []).map((account) => (
           <li key={account.id}>
-            {account.name} — {formatGrosze(account.balanceGrosze)}
+            <button type="button" onClick={() => setSelectedKidId(account.id)}>
+              {account.name} — {formatGrosze(account.balanceGrosze)}
+            </button>
           </li>
         ))}
       </ul>

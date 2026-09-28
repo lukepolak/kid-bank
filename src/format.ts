@@ -5,3 +5,12 @@ export function formatGrosze(grosze: number): string {
     currency: "PLN",
   }).format(grosze / 100);
 }
+
+/** Timestamps are stored UTC, displayed Europe/Warsaw (SPEC). */
+export function formatDateTime(iso: string): string {
+  return new Intl.DateTimeFormat("pl-PL", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Europe/Warsaw",
+  }).format(new Date(iso));
+}

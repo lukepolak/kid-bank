@@ -7,7 +7,7 @@ import { makeAccessJwt } from "./support/access";
 declare global {
   namespace Cloudflare {
     interface GlobalProps {
-      mainModule: typeof import("../src/worker");
+      mainModule: typeof import("../../src/worker");
     }
   }
 }
@@ -42,6 +42,22 @@ interface Account {
   archived: boolean;
   balanceGrosze: number;
   overdraft: boolean;
+}
+
+interface Entry {
+  id: string;
+  amountGrosze: number;
+  description: string | null;
+  createdBy: string;
+  createdAt: string;
+}
+
+async function createKid(jwt: string, name: string): Promise<{ id: string }> {
+  const res = await exports.default.fetch(
+    authedJsonRequest("POST", "/api/kids", jwt, { name }),
+  );
+  expect(res.status).toBe(201);
+  return (await res.json()) as { id: string };
 }
 
 describe("Access identity at the API seam", () => {
@@ -98,6 +114,103 @@ describe("Access identity at the API seam", () => {
     });
   });
 
+  it("records an entry with attribution and returns the new balance", async () => {
+    const jwt = makeAccessJwt({ email: PARENT_EMAIL });
+    const kid = await createKid(jwt, "Zosia");
+
+    const res = await exports.default.fetch(
+      authedJsonRequest(
+        "POST",
+        `/api/accounts/${kid.id}/entries`,
+        jwt,
+        { amountGrosze: 10000, description: "Prezent urodzinowy" },
+      ),
+    );
+
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as {
+      entry: Entry;
+      balanceGrosze: number;
+      overdraft: boolean;
+    };
+    expect(body.entry.amountGrosze).toBe(10000);
+    expect(body.entry.description).toBe("Prezent urodzinowy");
+    expect(body.entry.createdBy).toBe(PARENT_EMAIL);
+    expect(typeof body.entry.createdAt).toBe("string");
+    expect(body.balanceGrosze).toBe(10000);
+    expect(body.overdraft).toBe(false);
+  });
+
+  it("lists an account's history newest first, and the home list reflects it", async () => {
+    const jwt = makeAccessJwt({ email: PARENT_EMAIL });
+    const kid = await createKid(jwt, "Historia");
+
+    for (const [amount, description] of [
+      [5000, "Kieszonkowe"],
+      [-2000, "LEGO z karetką"],
+    ] as const) {
+      const res = await exports.default.fetch(
+        authedJsonRequest(
+          "POST",
+          `/api/accounts/${kid.id}/entries`,
+          jwt,
+          { amountGrosze: amount, description },
+        ),
+      );
+      expect(res.status).toBe(201);
+    }
+
+    const history = await exports.default.fetch(
+      authedRequest(`/api/accounts/${kid.id}/entries`, jwt),
+    );
+    expect(history.status).toBe(200);
+    const entryList = (await history.json()) as Entry[];
+    expect(entryList).toHaveLength(2);
+    // Newest first: LEGO was recorded after Kieszonkowe.
+    expect(entryList[0]?.description).toBe("LEGO z karetką");
+    expect(entryList[1]?.description).toBe("Kieszonkowe");
+
+    const accountsRes = await exports.default.fetch(
+      authedRequest("/api/accounts", jwt),
+    );
+    const accounts = (await accountsRes.json()) as Account[];
+    const account = accounts.find((a) => a.id === kid.id);
+    expect(account?.balanceGrosze).toBe(3000);
+    expect(account?.overdraft).toBe(false);
+  });
+
+  it.each([
+    ["non-integer grosze", 100.5],
+    ["zero amount", 0],
+    ["out-of-range amount", 2_000_000],
+  ] as const)("rejects an entry with a %s", async (_name, amountGrosze) => {
+    const jwt = makeAccessJwt({ email: PARENT_EMAIL });
+    const kid = await createKid(jwt, "Walidacja");
+
+    const res = await exports.default.fetch(
+      authedJsonRequest("POST", `/api/accounts/${kid.id}/entries`, jwt, {
+        amountGrosze,
+        description: "Test",
+      }),
+    );
+
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 404 when adding an entry to an unknown kid", async () => {
+    const jwt = makeAccessJwt({ email: PARENT_EMAIL });
+    const res = await exports.default.fetch(
+      authedJsonRequest(
+        "POST",
+        "/api/accounts/nie-ma-takiego/entries",
+        jwt,
+        { amountGrosze: 1000 },
+      ),
+    );
+
+    expect(res.status).toBe(404);
+  });
+
   it("rejects a kid with an empty name with 400", async () => {
     const res = await exports.default.fetch(
       authedJsonRequest("POST", "/api/kids", makeAccessJwt({ email: PARENT_EMAIL }), {
@@ -116,9 +229,9 @@ describe("Access identity at the API seam", () => {
 
     const res = await exports.default.fetch(authedRequest("/api/accounts", jwt));
     const accounts = (await res.json()) as Account[];
+    const names = accounts.map((a) => a.name);
 
-    expect(accounts.at(0)?.name).toBe("Antek");
-    expect(accounts.at(1)?.name).toBe("Zosia");
+    expect(names.indexOf("Antek")).toBeLessThan(names.indexOf("Zosia"));
   });
 
   it("accepts a real-shaped token whose aud is an array (Cloudflare sends arrays)", async () => {
