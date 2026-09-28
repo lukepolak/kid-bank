@@ -49,6 +49,19 @@ describe("Access identity at the API seam", () => {
     expect(res.status).toBe(401);
   });
 
+  it("accepts a real-shaped token whose aud is an array (Cloudflare sends arrays)", async () => {
+    const res = await exports.default.fetch(
+      authedRequest(
+        "/api/ping",
+        makeAccessJwt({ email: PARENT_EMAIL, aud: ["test-audience-tag"] }),
+      ),
+    );
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { parent: string };
+    expect(body.parent).toBe(PARENT_EMAIL);
+  });
+
   it("answers an authenticated ping", async () => {
     const res = await exports.default.fetch(
       authedRequest("/api/ping", makeAccessJwt({ email: PARENT_EMAIL })),

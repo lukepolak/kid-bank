@@ -17,7 +17,7 @@
 export interface AccessClaims {
   email: string;
   iss?: string;
-  aud?: string;
+  aud?: string | string[];
   exp?: number;
 }
 
@@ -42,7 +42,10 @@ export function extractParentEmail(
   const now = Math.floor(Date.now() / 1000);
   if (typeof claims.exp !== "number" || claims.exp <= now) return null;
   if (claims.iss !== env.ACCESS_TEAM_DOMAIN) return null;
-  if (claims.aud !== env.ACCESS_AUD) return null;
+  // Real Access tokens carry `aud` as an array (see the application-token docs);
+  // accept both shapes.
+  const audiences = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
+  if (!audiences.includes(env.ACCESS_AUD)) return null;
 
   return claims.email;
 }

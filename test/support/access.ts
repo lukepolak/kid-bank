@@ -6,7 +6,7 @@
 export function makeAccessJwt(claims: {
   email: string;
   iss?: string;
-  aud?: string;
+  aud?: string | string[];
   exp?: number;
 }): string {
   const testTeam = "https://test-team.cloudflareaccess.com";
