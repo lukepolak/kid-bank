@@ -1,0 +1,35 @@
+{
+  "name": "kid-bank",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "deploy": "wrangler deploy",
+    "test": "vitest run",
+    "types": "wrangler types",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p test/tsconfig.json",
+    "db:generate": "drizzle-kit generate",
+    "db:apply:local": "wrangler d1 migrations apply skarbonka --local",
+    "db:apply:remote": "wrangler d1 migrations apply skarbonka --remote"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.3",
+    "hono": "^4.13.9",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.60.2",
+    "@cloudflare/vitest-plugin": "^1.2.8",
+    "@cloudflare/workers-types": "^5.20260927.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "drizzle-kit": "^0.31.11",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.1",
+    "vitest": "^4.1.11",
+    "wrangler": "^4.141.0"
+  }
+}
