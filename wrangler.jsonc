@@ -2,6 +2,9 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "skarbonka",
   "main": "src/worker/index.ts",
+  // One entrance: the family subdomain. (Access lock arrives with issue 02.)
+  "workers_dev": false,
+  "routes": [{ "pattern": "skarbonka.sdfg.pl", "custom_domain": true }],
   "compatibility_date": "2026-09-01",
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
@@ -14,8 +17,7 @@
     {
       "binding": "DB",
       "database_name": "skarbonka",
-      // Placeholder until `wrangler d1 create skarbonka` (see issue 01, human step).
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "213e9eca-0ab0-4edd-9000-cd4b29d04abd",
       "migrations_dir": "migrations"
     }
   ]
