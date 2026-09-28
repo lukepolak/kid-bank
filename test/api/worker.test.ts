@@ -348,6 +348,82 @@ describe("Access identity at the API seam", () => {
     expect(unknown.status).toBe(404);
   });
 
+  it("renames a kid; the new name appears everywhere", async () => {
+    const jwt = makeAccessJwt({ email: PARENT_EMAIL });
+    const kid = await createKid(jwt, "StareImie");
+    await addEntry(jwt, kid.id, { amountGrosze: 500 });
+
+    const res = await exports.default.fetch(
+      authedJsonRequest("PATCH", `/api/kids/${kid.id}`, jwt, {
+        name: "NoweImie",
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as Account;
+    expect(body.name).toBe("NoweImie");
+
+    const accounts = (await (
+      await exports.default.fetch(authedRequest("/api/accounts", jwt))
+    ).json()) as Account[];
+    const account = accounts.find((a) => a.id === kid.id);
+    expect(account?.name).toBe("NoweImie");
+    // History and balance are untouched by a rename.
+    expect(account?.balanceGrosze).toBe(500);
+  });
+
+  it("archives and unarchives a kid; history and balance survive", async () => {
+    const jwt = makeAccessJwt({ email: PARENT_EMAIL });
+    const kid = await createKid(jwt, "DoArchiwum");
+    await addEntry(jwt, kid.id, { amountGrosze: 2500, description: "Kieszonkowe" });
+
+    const archive = await exports.default.fetch(
+      authedJsonRequest("PATCH", `/api/kids/${kid.id}`, jwt, {
+        archived: true,
+      }),
+    );
+    expect(archive.status).toBe(200);
+    expect(((await archive.json()) as Account).archived).toBe(true);
+
+    // The accounts list still carries the kid (flagged), with balance intact.
+    let accounts = (await (
+      await exports.default.fetch(authedRequest("/api/accounts", jwt))
+    ).json()) as Account[];
+    expect(accounts.find((a) => a.id === kid.id)?.archived).toBe(true);
+    expect(accounts.find((a) => a.id === kid.id)?.balanceGrosze).toBe(2500);
+
+    // History is preserved while archived.
+    const history = (await (
+      await exports.default.fetch(
+        authedRequest(`/api/accounts/${kid.id}/entries`, jwt),
+      )
+    ).json()) as Entry[];
+    expect(history).toHaveLength(1);
+
+    const unarchive = await exports.default.fetch(
+      authedJsonRequest("PATCH", `/api/kids/${kid.id}`, jwt, {
+        archived: false,
+      }),
+    );
+    expect(unarchive.status).toBe(200);
+    expect(((await unarchive.json()) as Account).archived).toBe(false);
+
+    accounts = (await (
+      await exports.default.fetch(authedRequest("/api/accounts", jwt))
+    ).json()) as Account[];
+    expect(accounts.find((a) => a.id === kid.id)?.archived).toBe(false);
+  });
+
+  it("cannot delete a kid — no such endpoint exists", async () => {
+    const jwt = makeAccessJwt({ email: PARENT_EMAIL });
+    const kid = await createKid(jwt, "Nieusuwalny");
+
+    const res = await exports.default.fetch(
+      authedJsonRequest("DELETE", `/api/kids/${kid.id}`, jwt),
+    );
+    expect(res.status).toBe(404);
+  });
+
   it("rejects a kid with an empty name with 400", async () => {
     const res = await exports.default.fetch(
       authedJsonRequest("POST", "/api/kids", makeAccessJwt({ email: PARENT_EMAIL }), {

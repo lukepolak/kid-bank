@@ -15,6 +15,15 @@ const KidInput = z.object({
   name: z.string().trim().min(1).max(50),
 });
 
+const KidPatchInput = z
+  .object({
+    name: z.string().trim().min(1).max(50).optional(),
+    archived: z.boolean().optional(),
+  })
+  .refine((v) => v.name !== undefined || v.archived !== undefined, {
+    message: "Podaj imię lub status archiwum",
+  });
+
 const EntryInput = z.object({
   amountGrosze: z
     .number()
@@ -36,6 +45,30 @@ const api = new Hono<AppEnv>()
     c.set("parentEmail", email);
     await next();
   })
+  .patch(
+    "/kids/:id",
+    zValidator("json", KidPatchInput, (result, c) => {
+      if (!result.success) {
+        return c.json(
+          { error: "Podaj imię (1–50 znaków) lub status archiwum" },
+          400,
+        );
+      }
+    }),
+    async (c) => {
+      const ledger = createLedger(c.env.DB);
+      const { name, archived } = c.req.valid("json");
+      const kidId = c.req.param("id");
+
+      let account = null;
+      if (name !== undefined) account = await ledger.renameKid(kidId, name);
+      if (archived !== undefined)
+        account = await ledger.setArchived(kidId, archived);
+
+      if (!account) return c.json({ error: "Nie ma takiego dziecka" }, 404);
+      return c.json(account);
+    },
+  )
   .post(
     "/kids",
     zValidator("json", KidInput, (result, c) => {

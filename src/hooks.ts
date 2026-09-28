@@ -45,6 +45,26 @@ export function useAddKid() {
   });
 }
 
+export function useUpdateKid() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: {
+      id: string;
+      name?: string;
+      archived?: boolean;
+    }) => {
+      const res = await api.kids[":id"].$patch({
+        param: { id: input.id },
+        json: { name: input.name, archived: input.archived },
+      });
+      if (!res.ok) throw new Error("Nie udało się zapisać dziecka");
+      return (await res.json()) as Account;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["accounts"] }),
+  });
+}
+
 export function useEntries(kidId: string) {
   return useQuery({
     queryKey: ["entries", kidId],

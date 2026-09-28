@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { formatGrosze } from "./format";
 import { KidDetail } from "./KidDetail";
-import { useAccounts, useAddKid } from "./hooks";
+import { useAccounts, useAddKid, useUpdateKid } from "./hooks";
 
 export function App() {
   const { data: accounts, isPending, error } = useAccounts();
   const addKid = useAddKid();
+  const updateKid = useUpdateKid();
   const [name, setName] = useState("");
   const [selectedKidId, setSelectedKidId] = useState<string | null>(null);
 
@@ -13,6 +14,9 @@ export function App() {
   if (selected) {
     return <KidDetail account={selected} onBack={() => setSelectedKidId(null)} />;
   }
+
+  const active = (accounts ?? []).filter((account) => !account.archived);
+  const archived = (accounts ?? []).filter((account) => account.archived);
 
   return (
     <main>
@@ -22,7 +26,7 @@ export function App() {
       {error && <p role="alert">Brak połączenia</p>}
 
       <ul>
-        {(accounts ?? []).map((account) => (
+        {active.map((account) => (
           <li key={account.id}>
             <button type="button" onClick={() => setSelectedKidId(account.id)}>
               {account.name} —{" "}
@@ -35,7 +39,7 @@ export function App() {
         ))}
       </ul>
 
-      {(accounts?.length ?? 0) === 0 && !isPending && !error && (
+      {active.length === 0 && !isPending && !error && (
         <p>Dodaj pierwsze dziecko, aby zacząć.</p>
       )}
 
@@ -56,6 +60,28 @@ export function App() {
           Dodaj dziecko
         </button>
       </form>
+
+      {archived.length > 0 && (
+        <section>
+          <h2>Zarchiwizowane</h2>
+          <ul>
+            {archived.map((account) => (
+              <li key={account.id}>
+                {account.name}{" "}
+                <button
+                  type="button"
+                  disabled={updateKid.isPending}
+                  onClick={() =>
+                    updateKid.mutate({ id: account.id, archived: false })
+                  }
+                >
+                  Przywróć
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </main>
   );
 }

@@ -55,6 +55,48 @@ export function createLedger(d1: D1Database) {
       };
     },
 
+    /** Rename a kid. The account, history, and balance are untouched. */
+    async renameKid(id: string, name: string): Promise<AccountSummary | null> {
+      const updated = await db
+        .update(kids)
+        .set({ name })
+        .where(eq(kids.id, id))
+        .returning({ id: kids.id });
+      if (updated.length === 0) return null;
+      return this.accountOf(id);
+    },
+
+    /**
+     * Archive (or restore) a kid. Archiving hides the account from the home
+     * screen but preserves everything — kids are never deleted (SPEC).
+     */
+    async setArchived(
+      id: string,
+      archived: boolean,
+    ): Promise<AccountSummary | null> {
+      const updated = await db
+        .update(kids)
+        .set({ archived })
+        .where(eq(kids.id, id))
+        .returning({ id: kids.id });
+      if (updated.length === 0) return null;
+      return this.accountOf(id);
+    },
+
+    /** One account's full summary, derived. */
+    async accountOf(id: string): Promise<AccountSummary | null> {
+      const kid = await db.select().from(kids).where(eq(kids.id, id)).get();
+      if (!kid) return null;
+      const { balanceGrosze, overdraft } = await this.balanceOf(id);
+      return {
+        id: kid.id,
+        name: kid.name,
+        archived: kid.archived,
+        balanceGrosze,
+        overdraft,
+      };
+    },
+
     /** Every kid's account with its derived balance (SPEC: ordered by name). */
     async listAccounts(): Promise<AccountSummary[]> {
       const rows = await db
