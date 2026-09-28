@@ -28,3 +28,17 @@ app.
 ## Blocked by
 
 - [04 — Entries](04-entries.md)
+
+## Comments
+
+- Agent part done & deployed: manifest (pl, standalone, amber theme), icons
+  (192/512 + apple-touch-icon, rendered from icon.svg), hand-rolled runtime-caching
+  service worker (shell cached, /api/* network-only by design), SW registration,
+  explicit "brak połączenia" error states on both screens. No dependency on
+  Workbox/vite-plugin-pwa — the SW is ~60 readable lines.
+- **Caveat documented during build**: Access protects the PWA asset paths too —
+  anonymous `curl` gets 302. Logged-in browser fetches carry the session cookie,
+  so install should work; if a device fails to install or opens as a browser tab,
+  the fix is path-based bypass Access applications for `/manifest.webmanifest`,
+  `/sw.js` and `/icons/*` (Bypass + Everyone). These assets are public-safe.
+- Status: awaiting device verification on both parents' phones.
