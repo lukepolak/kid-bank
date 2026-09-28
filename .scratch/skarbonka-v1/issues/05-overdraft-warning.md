@@ -18,12 +18,18 @@ No hard blocking anywhere.
 
 ## Acceptance criteria
 
-- [ ] Removing more than the current balance succeeds; the balance goes negative
-- [ ] The accounts API returns a correct overdraft flag (true exactly when derived balance < 0)
-- [ ] The account detail screen shows a soft warning when the account is overdrawn
-- [ ] The home screen makes an overdrawn account visually distinct from healthy ones
-- [ ] Integration test at the primary seam: a sequence of entries crossing zero flips the overdraft flag to true; the entry itself is never rejected
+- [x] Removing more than the current balance succeeds; the balance goes negative
+- [x] The accounts API returns a correct overdraft flag (true exactly when derived balance < 0)
+- [x] The account detail screen shows a soft warning when the account is overdrawn
+- [x] The home screen makes an overdrawn account visually distinct from healthy ones
+- [x] Integration test at the primary seam: a sequence of entries crossing zero flips the overdraft flag to true; the entry itself is never rejected
 
 ## Blocked by
 
 - [04 — Entries](04-entries.md)
+
+## Comments
+
+- Status: done. The crossing-zero seam test passed on first run — the Ledger's
+  flag logic shipped with issue 04's balance derivation; this slice pinned it
+  and added the UI (amber warnings, light+dark). Deployed.
