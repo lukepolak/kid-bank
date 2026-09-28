@@ -13,11 +13,10 @@
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*"]
   },
-  // Filled in by the Zero Trust dashboard step (issue 02). Until then these
-  // are empty and every API request is rejected — fail closed.
+  // Zero Trust anchors for the Access application protecting this Worker (issue 02).
   "vars": {
-    "ACCESS_TEAM_DOMAIN": "",
-    "ACCESS_AUD": ""
+    "ACCESS_TEAM_DOMAIN": "https://dev-polak.cloudflareaccess.com",
+    "ACCESS_AUD": "1eec8a64490b16abd5ed302e85590d232a130f0840b417de2f6edc8a98a6cda8"
   },
   "d1_databases": [
     {

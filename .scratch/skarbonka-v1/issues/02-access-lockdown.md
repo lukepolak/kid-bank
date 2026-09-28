@@ -31,3 +31,16 @@ it).
 ## Blocked by
 
 - [01 — Walking skeleton](01-walking-skeleton.md)
+
+## Comments
+
+- Decision change during implementation: **One-time PIN replaces Google OAuth** as the login
+  method. Rationale: for exactly two adults with 1-month sessions, the Google path requires
+  maintaining a GCP OAuth client (consent screen, client ID/secret) forever to save typing one
+  6-digit code per person per month. OTP is zero-maintenance and equally secure for our threat
+  model (email-based). All other criteria unchanged (two allowed emails, 1-month sessions,
+  subdomain). If the Zero Trust org is later reused for more apps, adding Google as a second
+  login method is non-breaking.
+- Code side done: identity module (claims validation, fail-closed on unconfigured Access
+  anchors, local-dev bypass), 401 middleware, 6/6 seam tests green. Production 401s everything
+  until ACCESS_TEAM_DOMAIN/ACCESS_AUD are filled and deployed — fail closed by design.
